@@ -31,10 +31,13 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
 import android.hardware.usb.UsbDevice;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.media.ThumbnailUtils;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
 import android.os.SystemClock;
 import android.os.storage.StorageManager;
 import android.util.Log;
@@ -87,7 +90,6 @@ public final class MainActivity extends BaseActivity {
     private static final int CAPTURE_PREPARE = 1;
     private static final int CAPTURE_RUNNING = 2;
     private boolean mIsRecordMode = true;
-    private boolean isIsUsbLongKey=false;//usb摄像头长按，true为按下
     private final Object mSync = new Object();
     // for accessing USB and USB camera
     private USBMonitor mUSBMonitor;
@@ -105,12 +107,22 @@ public final class MainActivity extends BaseActivity {
     protected static String imagePath = "";
     public static String External_Storage = "";
     private String timeStr = "";
-    private Handler mHandler = new Handler();
     private long video_timer = 0;
     private boolean isStopCount = false;
     private long mRecordingStartTime;
     private boolean allowedvideo = false;//是否允许进入拍照和录像
     private Toast mToast;
+    private SoundPool mSoundPool;
+    private int mRefocusSound;
+    private SoundPool mVideoStartSoundPool;
+    private int mVideoStartRefocusSound;
+    private SoundPool mVideoStopSoundPool;
+    private int mVideoStopRefocusSound;
+    // Handler messages
+    private final int UVC_TAKE_PICTURE = 1;
+    private final int UVC_START_CAPTURE = 2;
+    private final int UVC_STOP_CAPTURE = 3;
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,6 +133,14 @@ public final class MainActivity extends BaseActivity {
         startLogcatManager();
         countTimer();
         External_Storage = getStoragePath(MainActivity.this, true);
+        mSoundPool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 0);
+        mRefocusSound = mSoundPool.load(this, R.raw.camera_click, 1);
+        mVideoStartSoundPool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 0);
+        mVideoStartRefocusSound = mVideoStartSoundPool.load(this, R.raw.video_record, 1);
+        mVideoStopSoundPool = new SoundPool(1, AudioManager.STREAM_RING, 0);
+        ;
+        mVideoStopRefocusSound = mVideoStopSoundPool.load(this, R.raw.focus_complete, 1);
+        ;
     }
 
     private void initView() {
@@ -262,6 +282,7 @@ public final class MainActivity extends BaseActivity {
             }
         }
     }
+
     private void disableCameraOTG() {
         File file = new File("/sys/devices/soc.0/78d9000.usb/backboard_otg_power_enable");
         if (file.exists()) {
@@ -299,7 +320,7 @@ public final class MainActivity extends BaseActivity {
             synchronized (mSync) {
                 if (!isChecked && mUVCCamera == null) {
                     //CameraDialog.showDialog(MainActivity.this);
-                     enableCameraOTG();
+                    enableCameraOTG();
                     final List<UsbDevice> Device = mUSBMonitor.getDeviceList();
                     if (!Device.isEmpty()) {
                         allowedvideo = true;
@@ -322,6 +343,34 @@ public final class MainActivity extends BaseActivity {
             if (allowedvideo == true) {
                 if (mIsRecordMode == true)
                     if (mCaptureState == CAPTURE_STOP) {
+                        mHandler.sendEmptyMessage(UVC_START_CAPTURE);
+                    } else {
+                        mHandler.sendEmptyMessage(UVC_STOP_CAPTURE);
+                    }
+                else {
+                    mHandler.sendEmptyMessage(UVC_TAKE_PICTURE);
+                }
+            } else {
+
+                showToast("请确认是否连接和打开摄像头");
+            }
+        }
+    };
+    Handler mHandler = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case UVC_TAKE_PICTURE: {
+                    if (allowedvideo == true) {
+                        isTakePicture = true;
+                        showToast("拍照成功");
+                    }
+                    break;
+                }
+                case UVC_START_CAPTURE: {
+                    if ((allowedvideo == true) && (mCaptureState == CAPTURE_STOP)) {
                         mCaptureButton.setImageResource(R.drawable.shutter_button_video_stop);
                         mSwitchModeButton.setVisibility(View.GONE);
                         mCameraButton.setVisibility(View.GONE);
@@ -330,10 +379,16 @@ public final class MainActivity extends BaseActivity {
                         mvideotimetext.setVisibility(View.VISIBLE);
                         mvideotimetext.setText("00:00:00");
                         isStopCount = false;
+                        mIsRecordMode = true;
                         mRecordingStartTime = SystemClock.uptimeMillis();
                         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//保持屏幕常亮
+                        mVideoStartSoundPool.play(mVideoStartRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
                         startCapture();
-                    } else {
+                    }
+                    break;
+                }
+                case UVC_STOP_CAPTURE: {
+                    if ((allowedvideo == true) && (mCaptureState != CAPTURE_STOP)) {
                         mCaptureButton.setImageResource(R.drawable.shutter_button_video);
                         mSwitchModeButton.setVisibility(View.VISIBLE);
                         mCameraButton.setVisibility(View.VISIBLE);
@@ -341,18 +396,14 @@ public final class MainActivity extends BaseActivity {
                         mReviewImage.setVisibility(View.VISIBLE);
                         mvideotimetext.setVisibility(View.GONE);
                         showToast("录像结束");
+                        mIsRecordMode = true;
+                        mVideoStopSoundPool.play(mVideoStopRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//释放屏幕常亮
                         isStopCount = true;
-                        isIsUsbLongKey=false;
                         stopCapture();
                     }
-                else {
-                    isTakePicture = true;
-                    showToast("拍照成功");
+                    break;
                 }
-            } else {
-
-                showToast("请确认是否连接和打开摄像头");
             }
         }
     };
@@ -537,7 +588,7 @@ public final class MainActivity extends BaseActivity {
         @Override
         public void onDettach(final UsbDevice device) {
             allowedvideo = false;
-           // Toast.makeText(MainActivity.this, "摄像头已移除", Toast.LENGTH_SHORT).show();
+            // Toast.makeText(MainActivity.this, "摄像头已移除", Toast.LENGTH_SHORT).show();
         }
 
         @Override
@@ -621,7 +672,6 @@ public final class MainActivity extends BaseActivity {
 
     private final IFrameCallback mIFrameCallback = new IFrameCallback() {
         private int flag;
-        private boolean isRecording = false;
 
         @Override
         public void onFrame(final ByteBuffer frame) {
@@ -632,20 +682,17 @@ public final class MainActivity extends BaseActivity {
                             flag = 1;
                             mUVCCamera.resetBacklightComp();
                             frame.clear();
-                            isTakePicture = true;
+                            mHandler.sendEmptyMessage(UVC_TAKE_PICTURE);
                         }
                         break;
                     case 2:
                         if (flag != 2) {
                             flag = 2;
                             mUVCCamera.resetBacklightComp();
-                            if (!isRecording) {
-                                isRecording = true;
-                                startCapture();
+                            if (mCaptureState == CAPTURE_STOP) {
+                                mHandler.sendEmptyMessage(UVC_START_CAPTURE);
                             } else {
-                                isRecording = false;
-                                isIsUsbLongKey=true;
-                                stopCapture();
+                                mHandler.sendEmptyMessage(UVC_STOP_CAPTURE);
                             }
                         }
                         break;
@@ -658,6 +705,7 @@ public final class MainActivity extends BaseActivity {
             }
             if (isTakePicture) {
                 isTakePicture = false;
+                mSoundPool.play(mRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
                 takePicture(frame);
             }
             /*
@@ -667,6 +715,7 @@ public final class MainActivity extends BaseActivity {
 			*/
         }
     };
+
     protected void showToast(String msg) {
         if (mToast == null) {
             mToast = Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT);
@@ -675,6 +724,7 @@ public final class MainActivity extends BaseActivity {
         }
         mToast.show();
     }
+
     private final IFrameCallback mIAudioCallback = new IFrameCallback() {
         @Override
         public void onFrame(final ByteBuffer pcmData) {
@@ -830,7 +880,6 @@ public final class MainActivity extends BaseActivity {
 
     private final void startCapture() {
         if (DEBUG) Log.v(TAG, "startCapture:");
-       // getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//保持屏幕常亮
         if (mMuxer == null && (mCaptureState == CAPTURE_STOP)) {
             mCaptureState = CAPTURE_PREPARE;
             queueEvent(new Runnable() {
@@ -859,11 +908,9 @@ public final class MainActivity extends BaseActivity {
 
     private final void stopCapture() {
         if (DEBUG) Log.v(TAG, "stopCapture:");
-       // getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//释放屏幕常亮
         queueEvent(new Runnable() {
             @Override
             public void run() {
-                if(isIsUsbLongKey) showToast("录像结束");
                 synchronized (mSync) {
                     if (mUVCCamera != null) {
                         mUVCCamera.stopCapture();
@@ -873,7 +920,6 @@ public final class MainActivity extends BaseActivity {
                     mMuxer.stopRecording();
                     mMuxer = null;
                 }
-                isIsUsbLongKey=false;
             }
         }, 0);
     }
