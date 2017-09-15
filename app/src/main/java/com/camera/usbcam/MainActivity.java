@@ -38,6 +38,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.storage.StorageManager;
 import android.util.Log;
@@ -122,6 +123,7 @@ public final class MainActivity extends BaseActivity {
     private final int UVC_TAKE_PICTURE = 1;
     private final int UVC_START_CAPTURE = 2;
     private final int UVC_STOP_CAPTURE = 3;
+    private PowerManager.WakeLock wakeLock = null;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -133,14 +135,12 @@ public final class MainActivity extends BaseActivity {
         startLogcatManager();
         countTimer();
         External_Storage = getStoragePath(MainActivity.this, true);
-        mSoundPool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 0);
+        mSoundPool = new SoundPool(1, AudioManager.STREAM_RING, 0);
         mRefocusSound = mSoundPool.load(this, R.raw.camera_click, 1);
-        mVideoStartSoundPool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 0);
+        mVideoStartSoundPool = new SoundPool(1, AudioManager.STREAM_RING, 0);
         mVideoStartRefocusSound = mVideoStartSoundPool.load(this, R.raw.video_record, 1);
         mVideoStopSoundPool = new SoundPool(1, AudioManager.STREAM_RING, 0);
-        ;
         mVideoStopRefocusSound = mVideoStopSoundPool.load(this, R.raw.focus_complete, 1);
-        ;
     }
 
     private void initView() {
@@ -253,6 +253,9 @@ public final class MainActivity extends BaseActivity {
                 mUSBMonitor = null;
             }
         }
+        if (mToast != null) {
+            mToast.cancel();
+        }
         disableCameraOTG();
         mCameraButton = null;
         mCaptureButton = null;
@@ -260,8 +263,28 @@ public final class MainActivity extends BaseActivity {
         mOtherSettingButton = null;
         mReviewImage = null;
         mSwitchModeButton = null;
+        releaseWakeLock();
         super.onDestroy();
         stopLogcatManager();
+    }
+
+    //获取电源锁，保持该服务在屏幕熄灭时仍然获取CPU时，保持运行
+    private void acquireWakeLock() {
+        if (null == wakeLock) {
+            PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
+            wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ON_AFTER_RELEASE, "PostLocationService");
+            if (null != wakeLock) {
+                wakeLock.acquire();
+            }
+        }
+    }
+
+    //释放设备电源锁
+    private void releaseWakeLock() {
+        if (null != wakeLock) {
+            wakeLock.release();
+            wakeLock = null;
+        }
     }
 
     private void enableCameraOTG() {
@@ -380,8 +403,9 @@ public final class MainActivity extends BaseActivity {
                         mvideotimetext.setText("00:00:00");
                         isStopCount = false;
                         mIsRecordMode = true;
+                        acquireWakeLock();
                         mRecordingStartTime = SystemClock.uptimeMillis();
-                        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//保持屏幕常亮
+                        //getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//保持屏幕常亮
                         mVideoStartSoundPool.play(mVideoStartRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
                         startCapture();
                     }
@@ -397,8 +421,9 @@ public final class MainActivity extends BaseActivity {
                         mvideotimetext.setVisibility(View.GONE);
                         showToast("录像结束");
                         mIsRecordMode = true;
+                        releaseWakeLock();
                         mVideoStopSoundPool.play(mVideoStopRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
-                        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//释放屏幕常亮
+                        // getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//释放屏幕常亮
                         isStopCount = true;
                         stopCapture();
                     }
@@ -682,7 +707,9 @@ public final class MainActivity extends BaseActivity {
                             flag = 1;
                             mUVCCamera.resetBacklightComp();
                             frame.clear();
-                            mHandler.sendEmptyMessage(UVC_TAKE_PICTURE);
+                            if (mCaptureState == CAPTURE_STOP) {
+                                mHandler.sendEmptyMessage(UVC_TAKE_PICTURE);
+                            }
                         }
                         break;
                     case 2:

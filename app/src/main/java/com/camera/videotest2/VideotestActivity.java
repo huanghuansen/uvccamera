@@ -1,9 +1,7 @@
 package com.camera.videotest2;
 
 import android.app.Activity;
-import android.app.Notification;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.ThumbnailUtils;
@@ -16,21 +14,19 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.camera.encoder.MediaMuxerWrapper;
 import com.camera.usbcam.MainActivity;
 import com.camera.usbcam.R;
-import com.camera.utils.PreferencesUtils;
-
-import android.widget.AdapterView.OnItemClickListener;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class VideotestActivity extends Activity {
@@ -43,7 +39,7 @@ public class VideotestActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_videotest);
-        loadVaule();
+        new LoadFileThread().start();
     }
 
     private Handler handler = new Handler() {
@@ -54,6 +50,7 @@ public class VideotestActivity extends Activity {
             if (msg.what == 0) {
                 List<Picture> listPictures = (List<Picture>) msg.obj;
 //				Toast.makeText(getApplicationContext(), "handle"+listPictures.size(), 1000).show();
+                Collections.reverse(listPictures);
                 MyAdapter adapter = new MyAdapter(listPictures);
                 listView.setAdapter(adapter);
             }
@@ -63,9 +60,25 @@ public class VideotestActivity extends Activity {
 
     private File getfilePath() {
         if (MediaMuxerWrapper.isSaveSDCard == true) {
-            return new File(MainActivity.External_Storage, "/DCIM/USBCamera");
+            File destDir = new File(MainActivity.External_Storage, "/DCIM/USBCamera");
+            if (!destDir.exists()) {
+                destDir.mkdirs();
+            }
+            return destDir;
         } else {
-            return new File(cur_path);
+            File destDir = new File(cur_path);
+            if (!destDir.exists()) {
+                destDir.mkdirs();
+            }
+            return destDir;
+        }
+    }
+
+    private class LoadFileThread extends Thread {
+        @Override
+        public void run() {
+            loadVaule();
+            super.run();
         }
     }
 
@@ -73,9 +86,14 @@ public class VideotestActivity extends Activity {
         File file = getfilePath();
         File[] files = null;
         files = file.listFiles();
+        if (files.length == 0) return;
         listPictures = new ArrayList<Picture>();
         for (int i = 0; i < files.length; i++) {
-
+            for (int j = i + 1; j < files.length; j++) {
+                if (files[j].lastModified() < files[i].lastModified()) {
+                    files[i] = files[j];
+                }
+            }
             Picture picture = new Picture();
             if (files[i].getPath().toLowerCase().endsWith(".jpeg")) {
                 picture.setBitmap(getImageThumbnail(files[i].getPath(), 200, 200));
@@ -87,7 +105,6 @@ public class VideotestActivity extends Activity {
                 picture.setName(files[i].getName());
             }
             listPictures.add(picture);
-
         }
         listView = (ListView) findViewById(R.id.lv_show);
         Message msg = new Message();
@@ -105,7 +122,6 @@ public class VideotestActivity extends Activity {
             }
         });
         handler.sendMessage(msg);
-
     }
 
 

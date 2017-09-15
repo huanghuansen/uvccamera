@@ -24,7 +24,7 @@
 */
 -->
 <resources>
-    <string name="app_name">ext.camera</string>
+    <string name="app_name">12365单兵执法</string>
     <string name="select">Select USB Web Camera</string>
     <string name="camera">Camera</string>
     <string name="refresh">Refresh</string>
