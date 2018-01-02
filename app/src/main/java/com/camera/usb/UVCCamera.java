@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+
 public class UVCCamera {
     private static final boolean DEBUG = false;    // TODO set false when releasing
     private static final String TAG = UVCCamera.class.getSimpleName();
@@ -49,7 +50,6 @@ public class UVCCamera {
     public static final int DEFAULT_PREVIEW_MIN_FPS = 1;
     public static final int DEFAULT_PREVIEW_MAX_FPS = 30;
     public static final float DEFAULT_BANDWIDTH = 1.0f;
-
     public static final int FRAME_FORMAT_YUYV = 0;
     public static final int FRAME_FORMAT_MJPEG = 1;
 
@@ -337,6 +337,7 @@ public class UVCCamera {
                         addSize(format, format_type, 0, result);
                     }
                 }
+
             } catch (final JSONException e) {
             }
         return result;

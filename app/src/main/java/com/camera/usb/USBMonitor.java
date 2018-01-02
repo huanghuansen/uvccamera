@@ -56,7 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class USBMonitor {
 
-	private static final boolean DEBUG = true;	// TODO set false on production
+	private static final boolean DEBUG = false;	// TODO set false on production
 	private static final String TAG = "USBMonitor";
 
 	private static final String ACTION_USB_PERMISSION_BASE = "com.camera.USB_PERMISSION.";

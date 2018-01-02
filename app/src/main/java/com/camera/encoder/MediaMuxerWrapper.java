@@ -22,12 +22,10 @@ package com.camera.encoder;
  * All files in the folder are under this Apache License, Version 2.0.
 */
 
-import android.content.Context;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.os.Environment;
-import android.os.storage.StorageManager;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -35,9 +33,6 @@ import com.camera.usbcam.MainActivity;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;

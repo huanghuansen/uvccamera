@@ -53,54 +53,69 @@
         android:id="@+id/capture_button"
         android:layout_width="80dp"
         android:layout_height="80dp"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
         android:background="@null"
         android:scaleType="fitXY"
-        android:src="@drawable/shutter_button_video"
-        android:layout_centerVertical="true"
-        android:layout_alignParentEnd="true" />
+        android:src="@drawable/shutter_button_video" />
+
     <ImageButton
         android:id="@+id/btn_switch_mode"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignTop="@+id/btn_other_setting"
         android:background="@drawable/ic_switcher_menu_indicator"
         android:contentDescription="@string/app_name"
         android:scaleType="center"
-        android:src="@drawable/ic_switch_video"
-        android:layout_alignTop="@+id/btn_other_setting"
-        android:layout_alignParentEnd="true" />
+        android:src="@drawable/ic_switch_video" />
+
     <ImageView
         android:id="@+id/review_image"
         android:layout_width="60dp"
         android:layout_height="60dp"
-        android:src="@drawable/ic_gallery_play"
-        android:scaleType="fitCenter"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true" />
+        android:layout_alignParentEnd="true"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_gallery_play" />
+
     <ImageView
         android:id="@+id/btn_other_setting"
         android:layout_width="80dp"
         android:layout_height="80dp"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/imageView1"
         android:layout_marginTop="39dp"
         android:contentDescription="@string/app_name"
-        android:src="@drawable/ic_settings"
-        android:layout_below="@+id/imageView1"
-        android:layout_alignParentStart="true" />
-    <TextView android:id="@+id/vidiotimeText"
-        android:text ="00:00:00"
-        android:textColor="@color/RED"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerVertical="true"
-        android:visibility="gone"
-        android:layout_toStartOf="@+id/capture_button"
-        android:layout_marginEnd="43dp" />
+        android:src="@drawable/ic_settings" />
+
     <ToggleButton
         android:id="@+id/camera_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:checked="true"
-        android:text="ToggleButton"
+        android:layout_alignParentStart="true"
         android:layout_alignTop="@+id/review_image"
-        android:layout_alignParentStart="true" />
+        android:checked="true"
+        android:text="ToggleButton" />
+   <RelativeLayout
+       android:layout_alignParentTop="true"
+       android:layout_centerHorizontal="true"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content">
+       <TextView
+           android:id="@+id/vidiotimeText"
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"
+           android:layout_x="157dp"
+           android:layout_y="32dp"
+           android:text="00:00:00"
+           android:textColor="@color/RED"
+           android:textSize="35dp"
+           android:textStyle="bold"
+           android:visibility="gone"
+           android:layout_alignParentTop="true"
+           android:layout_alignParentStart="true"
+           android:layout_marginStart="200dp" />
+   </RelativeLayout>
 
 </RelativeLayout>
