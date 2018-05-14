@@ -285,6 +285,12 @@ public abstract class MediaEncoder implements Runnable {
         }
     }
 
+	/**
+        * Method to set byte array to the MediaCodec encoder
+        * @param buffer
+        * @param length　length of byte array, zero means EOS.
+        * @param presentationTimeUs
+        */
     /**
      * drain encoded data and write them to muxer
      */
@@ -370,7 +376,7 @@ LOOP:	while (mIsCapturing) {
                 mMediaCodec.releaseOutputBuffer(encoderStatus, false);
                 if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                 	// when EOS come.
-               		mIsCapturing = false;
+					mIsCapturing = false;
                     break;      // out of while
                 }
             }

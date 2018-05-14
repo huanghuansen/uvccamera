@@ -53,11 +53,11 @@
         android:id="@+id/capture_button"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:layout_alignParentEnd="true"
-        android:layout_centerVertical="true"
         android:background="@null"
         android:scaleType="fitXY"
-        android:src="@drawable/shutter_button_video" />
+        android:src="@drawable/shutter_button_video"
+        android:layout_centerVertical="true"
+        android:layout_alignParentEnd="true" />
 
     <ImageButton
         android:id="@+id/btn_switch_mode"
@@ -74,8 +74,8 @@
         android:id="@+id/review_image"
         android:layout_width="60dp"
         android:layout_height="60dp"
-        android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_gallery_play" />
 

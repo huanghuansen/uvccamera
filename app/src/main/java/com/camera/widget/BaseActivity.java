@@ -24,21 +24,20 @@ package com.camera.widget;
 */
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.StringRes;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.camera.usbcam.R;
 import com.camera.utils.HandlerThreadHandler;
 
-
-public class BaseActivity extends Activity
+public class BaseActivity extends FragmentActivity
 {
 	private static boolean DEBUG = false;
 	private static final String TAG = BaseActivity.class.getSimpleName();

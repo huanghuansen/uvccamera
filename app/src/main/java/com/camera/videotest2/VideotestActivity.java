@@ -39,7 +39,12 @@ public class VideotestActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_videotest);
+    }
+
+    @Override
+    protected void onStart() {
         new LoadFileThread().start();
+        super.onStart();
     }
 
     private Handler handler = new Handler() {
@@ -90,8 +95,13 @@ public class VideotestActivity extends Activity {
         listPictures = new ArrayList<Picture>();
         for (int i = 0; i < files.length; i++) {
             for (int j = i + 1; j < files.length; j++) {
+                File mfile = getfilePath();
+                File[] mfiles = null;
+                mfiles = mfile.listFiles();
                 if (files[j].lastModified() < files[i].lastModified()) {
+                    mfiles[0]=files[i];
                     files[i] = files[j];
+                    files[j]=mfiles[0];
                 }
             }
             Picture picture = new Picture();

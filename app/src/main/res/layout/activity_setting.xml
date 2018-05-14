@@ -22,7 +22,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="软件版本：1.0.1"
+        android:text="软件版本：1.0.5"
         android:textSize="20dp"
         android:id="@+id/textView" />
 </LinearLayout>

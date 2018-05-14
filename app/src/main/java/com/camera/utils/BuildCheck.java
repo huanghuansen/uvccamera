@@ -370,28 +370,28 @@ public final class BuildCheck {
 	public static boolean isAndroid6() {
 		return check(Build.VERSION_CODES.M);
 	}
+//
+//	/**
+//	 * 虫歯の元, API >= 24
+//	 * @return
+//	 */
+//	public static boolean isN() {
+//		return check(Build.VERSION_CODES.N);
+//	}
 
-	/**
-	 * 虫歯の元, API >= 24
-	 * @return
-	 */
-	public static boolean isN() {
-		return check(Build.VERSION_CODES.N);
-	}
-
-	/**
-	 * 歯にくっつくやつ, API >= 24
-	 * @return
-	 */
-	public static boolean isNougat() {
-		return check(Build.VERSION_CODES.N);
-	}
-	/**
-	 * API >= 24
-	 * @return
-	 */
-	public static boolean isAndroid7() {
-		return check(Build.VERSION_CODES.N);
-	}
+//	/**
+//	 * 歯にくっつくやつ, API >= 24
+//	 * @return
+//	 */
+//	public static boolean isNougat() {
+//		return check(Build.VERSION_CODES.N);
+//	}
+//	/**
+//	 * API >= 24
+//	 * @return
+//	 */
+//	public static boolean isAndroid7() {
+//		return check(Build.VERSION_CODES.N);
+//	}
 
 }

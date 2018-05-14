@@ -41,6 +41,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
+import android.os.StatFs;
 import android.os.SystemClock;
 import android.os.storage.StorageManager;
 import android.util.Log;
@@ -83,6 +84,8 @@ import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public final class MainActivity extends BaseActivity {
     private static final boolean DEBUG = true;    // set false when releasing
@@ -112,7 +115,6 @@ public final class MainActivity extends BaseActivity {
     private long video_timer = 0;
     private boolean isStopCount = true;
     private long mRecordingStartTime;
-    private boolean allowePlaydSoundPool = true;//是否允许进入拍照和录像
     private boolean allowedvideo = false;//是否允许进入拍照和录像
     private Toast mToast;
     private SoundPool mSoundPool;
@@ -127,6 +129,9 @@ public final class MainActivity extends BaseActivity {
     private final int UVC_STOP_CAPTURE = 3;
     private PowerManager.WakeLock wakeLock = null;
     ShutdownBroadcastReceiver mShutdownBroadcastReceiver;
+    private boolean isshowMemory = false;
+    private Timer mCheckTimer;
+    private int mExtensionCustomerValue = 0;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -135,7 +140,7 @@ public final class MainActivity extends BaseActivity {
         setContentView(R.layout.activity_main);
         initView();
         mUSBMonitor = new USBMonitor(this, mOnDeviceConnectListener);
-        startLogcatManager();
+        //startLogcatManager();
         countTimer();
         External_Storage = getStoragePath(MainActivity.this, true);
         mSoundPool = new SoundPool(1, AudioManager.STREAM_RING, 0);
@@ -148,6 +153,7 @@ public final class MainActivity extends BaseActivity {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction("android.intent.action.ACTION_SHUTDOWN");
         registerReceiver(mShutdownBroadcastReceiver, intentFilter);
+        Thread.setDefaultUncaughtExceptionHandler(new MyCrashHandler());
     }
 
     private void initView() {
@@ -163,8 +169,50 @@ public final class MainActivity extends BaseActivity {
         mReviewImage = (ImageView) findViewById(R.id.review_image);
         mReviewImage.setOnClickListener(mreviewOnClickListener);
         mUVCCameraView = (SimpleUVCCameraTextureView) findViewById(R.id.UVCCameraTextureView1);
-        //mUVCCameraView.setAspectRatio(UVCCamera.DEFAULT_PREVIEW_WIDTH / (float) UVCCamera.DEFAULT_PREVIEW_HEIGHT);
+        mUVCCameraView.setAspectRatio(UVCCamera.DEFAULT_PREVIEW_WIDTH / (float) UVCCamera.DEFAULT_PREVIEW_HEIGHT);
         mUVCCameraView.setSurfaceTextureListener(mSurfaceTextureListener);
+        mCheckTimer = new Timer();
+        mCheckTimer.schedule(new TimerTask() {
+            private int flag;
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {      // UI thread
+                    @Override
+                    public void run() {
+                        if (mUVCCamera != null) {
+                            switch (mUVCCamera.getExtensionCustomerValue()) {
+                                case 1:
+                                    if (flag != 1) {
+                                        flag = 1;
+                                        if (mCaptureState == CAPTURE_STOP) {
+                                            mHandler.sendEmptyMessage(UVC_TAKE_PICTURE);
+                                        }
+                                    }
+                                    break;
+                                case 2:
+                                    if (flag != 2) {
+                                        flag = 2;
+                                        if (allowedvideo == true) {
+                                            if (mCaptureState == CAPTURE_STOP) {
+                                                mHandler.sendEmptyMessage(UVC_START_CAPTURE);
+                                            } else {
+                                                mHandler.sendEmptyMessage(UVC_STOP_CAPTURE);
+                                            }
+                                        }
+                                    }
+                                    break;
+                                default:
+                                    if (flag != 0) {
+                                        flag = 0;
+                                    }
+                                    break;
+                            }
+                        }
+
+                    }
+                });
+            }
+        }, 1000, 1000);
     }
 
     @Override
@@ -247,30 +295,38 @@ public final class MainActivity extends BaseActivity {
 
     @Override
     public void onDestroy() {
-        synchronized (mSync) {
-            if (mUVCCamera != null) {
-                mUVCCamera.destroy();
-                mUVCCamera = null;
+        try {
+            synchronized (mSync) {
+                if (mUVCCamera != null) {
+                    mUVCCamera.destroy();
+                    mUVCCamera = null;
+                }
+                if (mUSBMonitor != null) {
+                    mUSBMonitor.destroy();
+                    mUSBMonitor = null;
+                }
             }
-            if (mUSBMonitor != null) {
-                mUSBMonitor.destroy();
-                mUSBMonitor = null;
+            if (mToast != null) {
+                mToast.cancel();
             }
+            if (mCheckTimer != null) {
+                mCheckTimer.cancel();
+            }
+            // disableCameraOTG();
+            unregisterReceiver(mShutdownBroadcastReceiver);
+            mCameraButton = null;
+            mCaptureButton = null;
+            mvideotimetext = null;
+            mUVCCameraView = null;
+            mOtherSettingButton = null;
+            mReviewImage = null;
+            mSwitchModeButton = null;
+            releaseWakeLock();
+            stopLogcatManager();
+            super.onDestroy();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        if (mToast != null) {
-            mToast.cancel();
-        }
-        // disableCameraOTG();
-        unregisterReceiver(mShutdownBroadcastReceiver);
-        mCameraButton = null;
-        mCaptureButton = null;
-        mUVCCameraView = null;
-        mOtherSettingButton = null;
-        mReviewImage = null;
-        mSwitchModeButton = null;
-        releaseWakeLock();
-        super.onDestroy();
-        stopLogcatManager();
     }
 
     /**
@@ -341,7 +397,7 @@ public final class MainActivity extends BaseActivity {
     }
 
     private void stopLogcatManager() {
-        LogcatFileManager.getInstance().stop();
+        //LogcatFileManager.getInstance().stop();
     }
 
     private final OnCheckedChangeListener mOnCheckedChangeListener = new OnCheckedChangeListener() {
@@ -400,11 +456,15 @@ public final class MainActivity extends BaseActivity {
                 }
                 case UVC_START_CAPTURE: {
                     if ((allowedvideo == true) && (mCaptureState == CAPTURE_STOP)) {
-                        if (allowePlaydSoundPool == true) {
-                            mVideoStartSoundPool.play(mVideoStartRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
-                        } else {
-                            allowePlaydSoundPool = true;
+                        if (((MediaMuxerWrapper.isSaveSDCard == false)) && (getAvailableInternalMemorySize(MainActivity.this) < 110080)) {
+                            showToast("空间不足，无法录像");
+                            break;
+                        } else if (((MediaMuxerWrapper.isSaveSDCard == true)) && (getAvailableExternalMemorySize(MainActivity.this) < 450887680)) {
+                            showToast("SD卡空间不足，无法录像");
+                            break;
                         }
+                        mVideoStartSoundPool.play(mVideoStartRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
+                        mRecordingStartTime = SystemClock.uptimeMillis();
                         mCaptureButton.setImageResource(R.drawable.shutter_button_video_stop);
                         mSwitchModeButton.setVisibility(View.GONE);
                         mCameraButton.setVisibility(View.GONE);
@@ -412,10 +472,11 @@ public final class MainActivity extends BaseActivity {
                         mReviewImage.setVisibility(View.GONE);
                         mvideotimetext.setVisibility(View.VISIBLE);
                         mvideotimetext.setText("00:00:00");
+                        mRecordingStartTime = SystemClock.uptimeMillis();
                         isStopCount = false;
                         mIsRecordMode = true;
                         acquireWakeLock();
-                        mRecordingStartTime = SystemClock.uptimeMillis();
+                        //  mRecordingStartTime = SystemClock.uptimeMillis();
                         //getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//保持屏幕常亮
                         startCapture();
                     }
@@ -423,6 +484,10 @@ public final class MainActivity extends BaseActivity {
                 }
                 case UVC_STOP_CAPTURE: {
                     if (mCaptureState != CAPTURE_STOP) {
+                        if (isshowMemory == true) {
+                            isshowMemory = false;//显示内存不足
+                            showToast("空间不足，无法录像，文件已保存");
+                        }
                         mCaptureButton.setImageResource(R.drawable.shutter_button_video);
                         mSwitchModeButton.setVisibility(View.VISIBLE);
                         mCameraButton.setVisibility(View.VISIBLE);
@@ -432,17 +497,15 @@ public final class MainActivity extends BaseActivity {
                         // showToast("录像结束");
                         mIsRecordMode = true;
                         releaseWakeLock();
-                        if (allowePlaydSoundPool == true) {
-                            mVideoStopSoundPool.play(mVideoStopRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
-                        } else {
-                            allowePlaydSoundPool = true;
-                        }
+                        mVideoStopSoundPool.play(mVideoStopRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
                         // getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//释放屏幕常亮
                         isStopCount = true;
                         stopCapture();
                     }
                     break;
                 }
+                default:
+                    break;
             }
         }
     };
@@ -486,11 +549,11 @@ public final class MainActivity extends BaseActivity {
                 long now = SystemClock.uptimeMillis();
                 long delta = now - mRecordingStartTime;
                 timeStr = millisecondToTimeString(delta);
-                mvideotimetext.setText(timeStr);
-                String mStr = timeStr.substring(0, 5);
-                if (mStr.equals("00:30")) {
+                String mStr = timeStr.substring(2, 8);
+                if ((mStr.equals(":30:00")) || (mStr.equals(":59:59"))) {
                     new StartNewFileThread().start();
                 }
+                mvideotimetext.setText(timeStr);
             }
             countTimer();
         }
@@ -499,9 +562,18 @@ public final class MainActivity extends BaseActivity {
     private class StartNewFileThread extends Thread {
         @Override
         public void run() {
+            super.run();
             if (mCaptureState != CAPTURE_STOP) {
-                allowePlaydSoundPool = false;
-                mHandler.sendEmptyMessage(UVC_STOP_CAPTURE);
+                if (((MediaMuxerWrapper.isSaveSDCard == false)) && (getAvailableInternalMemorySize(MainActivity.this) < 110080)) {
+                    isshowMemory = true;
+                    mHandler.sendEmptyMessage(UVC_STOP_CAPTURE);
+                    return;
+                } else if (((MediaMuxerWrapper.isSaveSDCard == true)) && (getAvailableExternalMemorySize(MainActivity.this) < 450887680)) { //小于430M,返回显示内存不足，停止录像
+                    isshowMemory = true;
+                    mHandler.sendEmptyMessage(UVC_STOP_CAPTURE);
+                    return;
+                } else
+                    stopCapture();
             }
             try {
                 Thread.sleep(300);
@@ -509,10 +581,8 @@ public final class MainActivity extends BaseActivity {
                 e.printStackTrace();
             }
             if (mCaptureState == CAPTURE_STOP) {
-                allowePlaydSoundPool = false;
-                mHandler.sendEmptyMessage(UVC_START_CAPTURE);
+                startCapture();
             }
-            super.run();
         }
     }
 
@@ -742,9 +812,10 @@ public final class MainActivity extends BaseActivity {
 
         @Override
         public void onFrame(final ByteBuffer frame) {
-            if (mUVCCamera.checkSupportFlag(UVCCamera.PU_BACKLIGHT)) {
-                switch (mUVCCamera.getBacklightComp()) {
+          /*  if (mUVCCamera.checkSupportFlag(UVCCamera.PU_BACKLIGHT)) {
+                 switch (mUVCCamera.getBacklightComp()) {
                     case 1:
+                        Log.e(TAG, "mIFrameCallback2...... ");
                         if (flag != 1) {
                             flag = 1;
                             mUVCCamera.resetBacklightComp();
@@ -755,6 +826,7 @@ public final class MainActivity extends BaseActivity {
                         }
                         break;
                     case 2:
+                        Log.e(TAG, "mIFrameCallback3...... ");
                         if (flag != 2) {
                             flag = 2;
                             mUVCCamera.resetBacklightComp();
@@ -768,12 +840,13 @@ public final class MainActivity extends BaseActivity {
                         }
                         break;
                     default:
+                        Log.e(TAG, "mIFrameCallback4...... ");
                         if (flag != 0) {
                             flag = 0;
                         }
                         break;
                 }
-            }
+            }*/
             if (isTakePicture) {
                 isTakePicture = false;
                 mSoundPool.play(mRefocusSound, 1.0f, 1.0f, 0, 0, 1.0f);
@@ -922,23 +995,21 @@ public final class MainActivity extends BaseActivity {
 			raw.put(frame);
 			mRawFrameData = raw;
 		*/
-        if (frame.remaining() > 0) {
-            final String path = getCaptureFile(Environment.DIRECTORY_DCIM, ".jpeg");
-            byte[] rawData = new byte[frame.remaining()];
-            frame.get(rawData);
-            Log.i(TAG, "get picture frame: " + rawData.length);
-            byte[] jpgData = mUVCCamera.extensionCompressRgbx(rawData, mUVCCamera.DEFAULT_PREVIEW_WIDTH, mUVCCamera.DEFAULT_PREVIEW_HEIGHT, 90);
-            Log.i(TAG, "compress picture " + jpgData.length);
-            FileOutputStream out = null;
+        if (frame != null && frame.remaining() > 0) {
             try {
+                final String path = getCaptureFile(Environment.DIRECTORY_DCIM, ".jpeg");
+                byte[] rawData = new byte[frame.remaining()];
+                frame.get(rawData);
+                Log.i(TAG, "get picture frame: " + rawData.length);
+                byte[] jpgData = mUVCCamera.extensionCompressRgbx(rawData, mUVCCamera.DEFAULT_PREVIEW_WIDTH, mUVCCamera.DEFAULT_PREVIEW_HEIGHT, 90);
+                Log.i(TAG, "compress picture " + jpgData.length);
+                FileOutputStream out = null;
                 out = new FileOutputStream(new File(path), true);
                 imagePath = path;
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-            try {
                 out.write(jpgData);
                 out.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -1214,6 +1285,57 @@ public final class MainActivity extends BaseActivity {
                     stopCapture();
                 }
             }
+        }
+    }
+
+    /**
+     * 获取可用内存
+     * getAvailableInternalMemorySize
+     *
+     * @param context
+     * @return long  返回可用块大小
+     * /*package
+     */
+    public Long getAvailableInternalMemorySize(Context context) {
+        File file = Environment.getDataDirectory();
+        StatFs statFs = new StatFs(file.getPath());
+        long availableBlocksLong = statFs.getAvailableBlocksLong();//3107289  //110080=430M
+        long blockSizeLong = statFs.getBlockSizeLong();//4K 块大小
+        //return Formatter.formatFileSize(context, availableBlocksLong
+        //      * blockSizeLong);
+        return availableBlocksLong;
+    }
+
+    /**
+     * 获取SD卡可用内存
+     * getAvailableInternalMemorySize
+     *
+     * @param context
+     * @return long  返回可用块大小
+     * /*package
+     */
+    public Long getAvailableExternalMemorySize(Context context) {
+        long ret = 0;
+        if (MediaMuxerWrapper.isSaveSDCard == true) {
+            StatFs statFs = new StatFs(getStoragePath(context, true));
+            long availableBlocksLong = statFs.getAvailableBlocksLong();
+            long blockSizeLong = statFs.getBlockSizeLong();
+            //return Formatter.formatFileSize(context, availableBlocksLong
+            //      * blockSizeLong);  //已G为单位
+            return availableBlocksLong * blockSizeLong; //450887680  430M
+        } else
+            return ret;
+    }
+
+    class MyCrashHandler implements Thread.UncaughtExceptionHandler {
+        @Override
+        public void uncaughtException(Thread thread, final Throwable throwable) {
+            // Deal this exception
+            // if (mCaptureState != CAPTURE_STOP) {
+            //     stopCapture();
+            //  }
+            Log.e("huansen", "崩溃了)");
+
         }
     }
 }

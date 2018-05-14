@@ -175,10 +175,9 @@ public class UVCCamera {
      * (UI thread or a thread that called Looper.prepare)
      */
     public UVCCamera() {
-        mNativePtr = nativeCreate();
-        Log.w(TAG, "");
-        mSupportedSize = null;
-    }
+    	mNativePtr = nativeCreate();
+    	mSupportedSize = null;
+	}
 
     /**
      * connect to a UVC camera
@@ -839,6 +838,9 @@ public class UVCCamera {
         if (mNativePtr != 0) {
             nativeSetZoom(mNativePtr, mZoomDef);
         }
+    }
+    public int getExtensionCustomerValue() {
+        return nativeExtensionCustomerValue(mNativePtr);
     }
 
 //================================================================================

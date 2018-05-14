@@ -33,7 +33,6 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 public class MediaAudioEncoder extends MediaEncoder {
     private static final boolean DEBUG = false;    // TODO set false on release
@@ -124,7 +123,7 @@ public class MediaAudioEncoder extends MediaEncoder {
                 int buffer_size = SAMPLES_PER_FRAME * FRAMES_PER_BUFFER;
                 if (buffer_size < min_buffer_size)
                     buffer_size = ((min_buffer_size / SAMPLES_PER_FRAME) + 1) * SAMPLES_PER_FRAME * 2;
-                final ByteBuffer buf = ByteBuffer.allocateDirect(SAMPLES_PER_FRAME).order(ByteOrder.nativeOrder()); //huansen
+
                 AudioRecord audioRecord = null;
                 for (final int source : AUDIO_SOURCES) {
                     try {
@@ -140,16 +139,13 @@ public class MediaAudioEncoder extends MediaEncoder {
                     } catch (final Exception e) {
                         audioRecord = null;
                     }
-                    if (audioRecord != null) {
-                        Log.i(TAG, "Audio Source: " + source);
-                        break;
-                    }
+                    if (audioRecord != null) break;
                 }
                 if (audioRecord != null) {
                     try {
                         if (mIsCapturing) {
                             if (DEBUG) Log.v(TAG, "AudioThread:start audio recording");
-                            //	final ByteBuffer buf = ByteBuffer.allocateDirect(SAMPLES_PER_FRAME); //huansen
+                            final ByteBuffer buf = ByteBuffer.allocateDirect(SAMPLES_PER_FRAME);
                             int readBytes;
                             audioRecord.startRecording();
                             try {
@@ -174,6 +170,8 @@ public class MediaAudioEncoder extends MediaEncoder {
                                 audioRecord.stop();
                             }
                         }
+                    } catch (final Exception e) {
+                        Log.e(TAG, "AudioThread#run", e);
                     } finally {
                         audioRecord.release();
                     }
@@ -207,7 +205,8 @@ public class MediaAudioEncoder extends MediaEncoder {
             }
             final String[] types = codecInfo.getSupportedTypes();
             for (int j = 0; j < types.length; j++) {
-                if (DEBUG) Log.i(TAG, "supportedType:" + codecInfo.getName() + ",MIME=" + types[j]);
+                if (DEBUG)
+                    Log.i(TAG, "supportedType:" + codecInfo.getName() + ",MIME=" + types[j]);
                 if (types[j].equalsIgnoreCase(mimeType)) {
                     if (result == null) {
                         result = codecInfo;

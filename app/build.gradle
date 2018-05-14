@@ -1,15 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 'Google Inc.:Google APIs:24'
-    buildToolsVersion "22.0.1"
+    compileSdkVersion 23
+    buildToolsVersion "23.0.3"
 
     defaultConfig {
-        applicationId "com.camera"
-        minSdkVersion 22
+        applicationId "com.camera.usbcam"
+        minSdkVersion 14
         targetSdkVersion 22
-        versionCode 1
-        versionName "1.0"
+        versionCode 5
+        versionName "1.9"
     }
     buildTypes {
         release {
@@ -19,14 +19,19 @@ android {
     }
     sourceSets {
         main {
-            jniLibs.srcDirs =['libs']
+            jniLibs.srcDirs = ['libs']
         }
+    }
+    productFlavors {
     }
 }
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:25.3.1'
     compile files('libs/universal-image-loader-1.9.2.jar')
+    compile 'com.android.support:appcompat-v7:23.4.0'
+    compile files('libs/butterknife-7.0.1.jar')
+    compile files('libs/glide-3.7.0.jar')
+    compile files('libs/picasso-2.5.2.jar')
 }

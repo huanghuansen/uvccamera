@@ -202,14 +202,14 @@ public class MediaMuxerWrapper {
             final File dir = new File(Environment.getExternalStoragePublicDirectory(type), "USBCamera");
             dir.mkdirs();    // create directories if they do not exist
             if (dir.canWrite()) {
-                return (new File(dir, "USB_"+getDateTimeString() + ext)).toString();
+                return (new File(dir, "USB_" + getDateTimeString() + ext)).toString();
             }
             return null;
         } else {
             final File dir = new File(MainActivity.External_Storage, "/DCIM/USBCamera");
             dir.mkdirs();      // create directories if they do not exist
             if (dir.canWrite()) {
-                return (new File(dir, "USB_"+getDateTimeString() + ext)).toString();
+                return (new File(dir, "USB_" + getDateTimeString() + ext)).toString();
             }
             return null;
         }
